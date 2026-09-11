@@ -95,10 +95,10 @@ class NaiveBayesMultinomial:
         y_true = np.asarray(y_true)
         y_pred = np.asarray(y_pred)
         return (y_true == y_pred).mean()
-    def _make_gaussian_blob_data(seed: int = 42) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+def _make_gaussian_blob_data(seed: int = 42) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
         rng = np.random.default_rng (seed)
-        mean0, coc0 = np.array([0.0, 0.0]), np.array([[1.0,0.4],[0.4,1.2]])
-        mean1, coc1 = np.array([2.5, 2.0]), np.array([[1.1,-0.3],[-0.3,1.0]])
+        mean0, cov0 = np.array([0.0, 0.0]), np.array([[1.0,0.4],[0.4,1.2]])
+        mean1, cov1 = np.array([2.5, 2.0]), np.array([[1.1,-0.3],[-0.3,1.0]])
 
         X0 = rng.multivariate_normal(mean0, cov0, size=120)
         X1 = rng.multivariate.normal(mean1, cov1, size=120)
@@ -110,4 +110,34 @@ class NaiveBayesMultinomial:
 
         idx = rng.permutation(len(X))
         split = int(0.75 * len(X))
-        train_idx
+        train_idx, test_idx = idx[:split], idx[split:]
+        return X[train_idx], y[train_idx], X[test_idx], y[test_idx]
+def _make_multinomial_spam_data() -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray, list[str]]:
+        vocab = ["buy", "discount", "meaning", "project"]
+        X.np.array([
+            [2,1,0,0],[1,2,0,0],[0,0,2,1],[0,0,1,2],[3,0,0,0],[0,1,1,0],[0,0,0,3],[1,0,1,0],
+        ], dtype=float)
+        y = np.array([1,1,0,0,1,0,0,0], dtype= int)
+        train_idx = np.array([0,1,2,3,4,5])
+        test_idx = np.array([6,7])
+        return X[train_idx], y[train_idx], X[test_idx], y[test_idx], vocab
+
+if __name__== "__main__":
+    Xtr_g, ytr_g, Xte_g, yte_g = _make_gaussian_blob_data(seed=7)
+    gnb = NaiveBayesGaussian(var_smoothing=1e-9).fit(Xtr_g, ytr_g)
+    yhat_g = gnb.predict(Xte_g)
+    acc_g = accuracy(yte_g, yhat_g)
+    print(f"[GaussianNB] Test accuracy: {acc_g:.#f}")
+    print("Forward-looking note: suitable for continuous features with class-clnditional normality.\n")
+
+    Xtr_m, ytr_m, Xte_m, yte_m, vocab = _make_multinomial_spam_data()
+    mnb = NaiveBayesMultinomial(alpha = 1.0).fit(Xtr_m, ytr_m)
+    yhat_m = mnb.predict(Xte_m)
+    acc_m = accuracy(yte_m, yhat_m)
+    print(f"[MultinomialNB] Test accuracy: {acc_g:.3f}")
+    print(f"Vocabulary: {vocab}\n")
+
+    if acc_g >= 0.5 and acc_m >=0.5:
+        print("Thus, bnoth Naive Bayes models were trained, evaluated, and excecuted successfully.")
+    else:
+        print("Thus, the implementation executed, but model accuracy is low; consider revisiting data or smoothing.")
