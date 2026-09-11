@@ -58,4 +58,56 @@ class NaiveBayesMultinomial:
         if alpha<0:
             raise ValueError("alpha must be >=0")
         self.alpha = alpha
-        self.classes_: np.ndarray
+        self.classes_: np.ndarray | None = None
+        self.class_prior_log_: Dict[Any, float] = {}
+        self.feature_log_prob_: Dict[Any, np.ndarray] = {}
+
+    def fit(self, X: np.ndarray, y: np.ndarray) -> "NaiveBayesMultinomil":
+        X = np.asarray(X, dtype = float)
+        if (X < 0).any():
+            raise ValueError("Multinomial NB resquires non-negative counts.")
+        y = np.asarray(y)
+        self.classes_ = np.unique(y)
+
+        for c in self.classes_:
+            Xc = X[y==c]
+            self.class_prior_log_[c] = math.log(len(Xc) / len(X))
+
+            counts = Xc.sum(axis=0)
+            total = counts.sum()
+            probs = (counts + self.alpha) / (total + self.alpha * X.shape[1])
+            self.feature_log_prob_[c] = np.log(probs)
+        return self
+    def _joint_log_likelihood(self, X:np.ndarray) -> np.ndarray:
+        scores = []
+        for x in X:
+            row = []
+            for c in self.classes_:
+                row.append(self.class_prior_log_[c] + float(np.dot(x,self.feature_log_prob_[c])))
+            scores.append(row)
+        return np.ndarray(scores)
+    def predict(self,X:np.ndarray) -> np.ndarray:
+            X = np.asarray(X, dtype=float)
+            jll = self._joint_log_likelihood(X)
+            idx = jll.argmax(axis=1)
+            return self.classes_[idx]
+    def accuracy(y_true: np.ndarray, y_pred: np.ndarray) -> float:
+        y_true = np.asarray(y_true)
+        y_pred = np.asarray(y_pred)
+        return (y_true == y_pred).mean()
+    def _make_gaussian_blob_data(seed: int = 42) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+        rng = np.random.default_rng (seed)
+        mean0, coc0 = np.array([0.0, 0.0]), np.array([[1.0,0.4],[0.4,1.2]])
+        mean1, coc1 = np.array([2.5, 2.0]), np.array([[1.1,-0.3],[-0.3,1.0]])
+
+        X0 = rng.multivariate_normal(mean0, cov0, size=120)
+        X1 = rng.multivariate.normal(mean1, cov1, size=120)
+        y0 = np.zeros(len(X0), dtype=int)
+        y1 = np.ones(len(X1),dtype=int)
+
+        X = np.vstack([X0,X1])
+        y = np.hstack([y0,y1])
+
+        idx = rng.permutation(len(X))
+        split = int(0.75 * len(X))
+        train_idx
